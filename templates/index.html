@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blink Typing</title>
+    <style>
+        /* Import Google Font */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+        /* General Page Styling */
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: #0d0d0d;
+            color: #fff;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        /* Header */
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: 3px;
+            color: #00ffcc;
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.8);
+            margin-bottom: 20px;
+        }
+
+        /* Glassmorphism Card */
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Video Feed */
+        video {
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(0, 255, 204, 0.5);
+            margin-top: 15px;
+        }
+
+        /* Output Text */
+        #output {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffcc00;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 15px;
+            text-shadow: 2px 2px 5px rgba(255, 204, 0, 0.8);
+            min-height: 30px;
+        }
+
+        /* Buttons */
+        .btn {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Button Colors */
+        .start { background: #00ffcc; color: #000; }
+        .predict { background: #ffcc00; color: #000; }
+        .speak { background: #ff0066; color: #fff; }
+        .clear { background: #6666ff; color: #fff; }
+
+        /* Button Hover Effects */
+        .btn:hover {
+            transform: scale(1.1);
+            filter: brightness(1.3);
+            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .container {
+                width: 95%;
+            }
+            .btn {
+                font-size: 16px;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>BlinkSense</h1>
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <p><strong>Typed Text:</strong> <span id="output"></span></p>
+
+        <button class="btn start" onclick="startBlinkDetection()">Start Blink Detection</button>
+        <button class="btn predict" onclick="predictWord()">Predict Word</button>
+        <button class="btn speak" onclick="speak()">Speak</button>
+        <button class="btn clear" onclick="clearText()">Clear</button>
+    </div>
+
+    <footer>Blink👁️AI Sensing</footer>
+
+    <script>
+        async function startWebcam() {
+            const video = document.getElementById("webcam");
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Webcam access denied!", err);
+                alert("Please allow camera access in browser settings!");
+            }
+        }
+
+        async function checkBlink() {
+            try {
+                let response = await fetch('http://127.0.0.1:5000/blink'); // Flask server URL
+                let data = await response.json();
+                console.log("Blink Data:", data);
+
+                let blinkType = data.blink;
+                let output = document.getElementById("output");
+
+                if (blinkType === "LEFT_BLINK") {
+                    output.innerHTML += "A";  
+                } else if (blinkType === "RIGHT_BLINK") {
+                    output.innerHTML += "B";
+                }
+
+                setTimeout(checkBlink, 1000);  // Check every second
+            } catch (error) {
+                console.error("Error fetching blink data:", error);
+            }
+        }
+
+        function startBlinkDetection() {
+            checkBlink();
+        }
+
+        async function predictWord() {
+            let text = document.getElementById("output").innerHTML;
+            if (text.length === 0) return;
+
+            let response = await fetch(`https://api.datamuse.com/sug?s=${text}`);
+            let suggestions = await response.json();
+            if (suggestions.length > 0) {
+                document.getElementById("output").innerHTML += " " + suggestions[0].word;
+            }
+        }
+
+        function speak() {
+            let text = document.getElementById("output").innerHTML;
+            if (text.length === 0) return;
+
+            let speech = new SpeechSynthesisUtterance(text);
+            speechSynthesis.speak(speech);
+        }
+
+        function clearText() {
+            document.getElementById("output").innerHTML = "";
+        }
+
+        // Keyboard Input for Testing
+        document.addEventListener("keydown", function(event) {
+            let output = document.getElementById("output");
+
+            if (event.key === "Backspace") {
+                output.innerHTML = output.innerHTML.slice(0, -1); // Remove last character
+            } else if (event.key.length === 1) {
+                output.innerHTML += event.key; // Append typed character
+            }
+        });
+
+        window.onload = startWebcam;
+    </script>
+</body>
+</html>
